@@ -118,3 +118,32 @@ class SpatialBroadcastDecoder(nn.Module):
         xhs = recons * masks
         recon = torch.sum(xhs, dim=1).permute(0, 3, 1, 2)
         return recon
+    
+class BetaVAEDecoder(nn.Module):
+    def __init__(self, nc=3, z_dim=6):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.Linear(z_dim, 256),               # B, 256
+            View((-1, 256, 1, 1)),               # B, 256,  1,  1
+            nn.ReLU(True),
+            nn.ConvTranspose2d(256, 64, 4),      # B,  64,  4,  4
+            nn.ReLU(True),
+            nn.ConvTranspose2d(64, 64, 4, 2, 1), # B,  64,  8,  8
+            nn.ReLU(True),
+            nn.ConvTranspose2d(64, 32, 4, 2, 1), # B,  32, 16, 16
+            nn.ReLU(True),
+            nn.ConvTranspose2d(32, 32, 4, 2, 1), # B,  32, 32, 32
+            nn.ReLU(True),
+            nn.ConvTranspose2d(32, nc, 4, 2, 1),  # B, nc, 64, 64
+        )
+
+    def forward(self, x):
+        return self.decider(x)
+    
+class View(nn.Module):
+    def __init__(self, size):
+        super(View, self).__init__()
+        self.size = size
+
+    def forward(self, tensor):
+        return tensor.view(self.size)

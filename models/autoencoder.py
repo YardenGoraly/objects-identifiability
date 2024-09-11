@@ -20,7 +20,7 @@ class AutoEncoder(torch.nn.Module):
             inferred latents and reconstructed observations
         """
         # encode
-        zh = self.encoder(x)
+        zh = self.encoder(x) #TODO: add gaussian noise to this for beta-vae
 
         # decode
         xh = self.decoder(zh)
