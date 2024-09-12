@@ -5,23 +5,25 @@ from torch.autograd import Variable
 class BetaVAE(nn.Module):
     """Model proposed in original beta-VAE paper(Higgins et al, ICLR, 2017)."""
 
-    def __init__(self, encoder, decoder, z_dim = 6, nc=3):
+    def __init__(self, encoder, decoder, num_slots, slot_dim, z_dim = 6, nc=3):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.z_dim = z_dim
         self.nc = nc
+        self.num_slots = num_slots
+        self.slots_dim = slot_dim
 
         self.weight_init()
 
     def forward(self, x):
-        distributions = self._encode(x)
-        mu = distributions[:, :self.z_dim]
-        logvar = distributions[:, self.z_dim:]
+        zh = self._encode(x)
+        mu = zh[:, :self.z_dim]
+        logvar = zh[:, self.z_dim:]
         z = reparameterize(mu, logvar)
         x_recon = self._decode(z).view(x.size())
 
-        return x_recon, mu, logvar
+        return zh.reshape(zh.shape[0], self.num_slots, self.slot_dim), x_recon, mu, logvar
 
     def weight_init(self):
         for block in self._modules:

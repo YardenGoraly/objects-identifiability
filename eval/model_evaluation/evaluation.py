@@ -20,7 +20,7 @@ import torch
 from lion_pytorch import Lion
 from torch import nn
 
-from model_evaluation import models, test, train
+from . import models, test, train
 
 __all__ = ["evaluate_model"]
 

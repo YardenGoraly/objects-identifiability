@@ -20,7 +20,7 @@ import sklearn.preprocessing
 import torch
 from torch import nn
 
-from model_evaluation import matching
+from . import matching
 
 
 def _compute_test_performance_single_model(

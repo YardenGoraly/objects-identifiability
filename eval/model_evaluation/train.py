@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from model_evaluation import datasets, matching, test
+from . import datasets, matching, test
 
 
 def check_training_stop_reached(

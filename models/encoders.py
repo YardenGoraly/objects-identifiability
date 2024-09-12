@@ -89,7 +89,7 @@ class SlotEncoder(nn.Module):
         return self.slot_attention(x)
 
 class BetaVAEEncoder(nn.Module):
-    def __init__(self, nc=3, z_dim=6):
+    def __init__(self, num_slots, hid_dim, nc=3, z_dim=6):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Conv2d(nc, 32, 4, 2, 1),          # B,  32, 32, 32
@@ -103,11 +103,11 @@ class BetaVAEEncoder(nn.Module):
             nn.Conv2d(64, 256, 4, 1),            # B, 256,  1,  1
             nn.ReLU(True),
             View((-1, 256*1*1)),                 # B, 256
-            nn.Linear(256, z_dim*2),             # B, z_dim*2
+            nn.Linear(256, num_slots * hid_dim),             # B, z_dim*2
         )
 
     def forward(self, x):
-        return self.encoder(x)
+        return self.encoder(x).reshape(x.shape[0], self.num_slots, self.hid_dim)
     
 class View(nn.Module):
     def __init__(self, size):

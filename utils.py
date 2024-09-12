@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from data.dataloader import ObjectsDataset
 from models import encoders, decoders
 from models.autoencoder import AutoEncoder
+from models.beta_vae import BetaVAE
 from torch import nn
 import hydra
 import omegaconf
@@ -164,7 +165,13 @@ def get_model(args):
         ).to(device)
 
     # get autoencoder
-    autoencoder = AutoEncoder(
+    # autoencoder = AutoEncoder(
+    #     num_slots=args.num_slots,
+    #     slot_dim=args.inf_slot_dim,
+    #     encoder=encoder,
+    #     decoder=decoder,
+    # ).to(device)
+    autoencoder = BetaVAE(
         num_slots=args.num_slots,
         slot_dim=args.inf_slot_dim,
         encoder=encoder,

@@ -5,10 +5,40 @@ import argparse
 import warnings
 from eval.eval_metrics import compositional_contrast
 from eval_model import eval_model
+import torch.nn.functional as F
 import utils
 import wandb
 
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+
+def reconstruction_loss(x, x_recon, distribution):
+    batch_size = x.size(0)
+    assert batch_size != 0
+
+    if distribution == 'bernoulli':
+        recon_loss = F.binary_cross_entropy_with_logits(x_recon, x, size_average=False).div(batch_size)
+    elif distribution == 'gaussian':
+        x_recon = F.sigmoid(x_recon)
+        recon_loss = F.mse_loss(x_recon, x, size_average=False).div(batch_size)
+    else:
+        recon_loss = None
+
+    return recon_loss
+
+def kl_divergence(mu, logvar):
+    batch_size = mu.size(0)
+    assert batch_size != 0
+    if mu.data.ndimension() == 4:
+        mu = mu.view(mu.size(0), mu.size(1))
+    if logvar.data.ndimension() == 4:
+        logvar = logvar.view(logvar.size(0), logvar.size(1))
+
+    klds = -0.5*(1 + logvar - mu.pow(2) - logvar.exp())
+    total_kld = klds.sum(1).mean(0, True)
+    dimension_wise_kld = klds.mean(0)
+    mean_kld = klds.mean(1).mean(0, True)
+
+    return total_kld, dimension_wise_kld, mean_kld
 
 
 def train_model(args):
@@ -50,12 +80,18 @@ def train_model(args):
 
         if args.encoder == "monet" or args.decoder == "monet":
             zh, xh, total_loss = model(x)
+        elif args.autoencoder == "beta-vae":
+            zh, x_recon, mu, logvar = model(x)
         else:
             zh, xh = model(x)
             total_loss = None
 
         # recon loss
-        recon_loss = (x - xh).square().mean()
+        if args.autoencoder == "beta-vae":
+            recon_loss = reconstruction_loss(x, x_recon, "gaussian")
+            total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
+        else:
+            recon_loss = (x - xh).square().mean()
         run_recon_loss += recon_loss.item()
 
         # c_comp
@@ -67,8 +103,12 @@ def train_model(args):
                 c_comp = torch.Tensor([0.0]).to(device)
 
         # total loss
+        beta = 10
         if total_loss == None:
-            total_loss = recon_loss + args.lam * c_comp
+            if args.autoencoder == "beta-vae":
+                total_loss = recon_loss + beta*total_kld
+            else:
+                total_loss = recon_loss + args.lam * c_comp
 
         total_loss.backward()
         optimizer.step()
@@ -186,6 +226,11 @@ if __name__ == "__main__":
         help="0 if slots are sampled independently and 1 for dependently for non-image data",
         type=int,
         default="0",
+    )
+
+    parser.add_argument(
+        "--autoencoder",
+        default="autoencoder",
     )
 
     args = parser.parse_args()
