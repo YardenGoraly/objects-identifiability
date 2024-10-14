@@ -26,4 +26,5 @@ class AutoEncoder(torch.nn.Module):
         xh = self.decoder(zh)
 
         # returns inferred latents and reconstructed observation
+        # import pdb; pdb.set_trace()
         return zh.reshape(zh.shape[0], self.num_slots, self.slot_dim), xh

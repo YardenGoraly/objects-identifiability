@@ -81,7 +81,9 @@ def train_model(args):
         if args.encoder == "monet" or args.decoder == "monet":
             zh, xh, total_loss = model(x)
         elif args.autoencoder == "beta-vae":
+            # import pdb; pdb.set_trace()
             zh, x_recon, mu, logvar = model(x)
+            total_loss = None
         else:
             zh, xh = model(x)
             total_loss = None

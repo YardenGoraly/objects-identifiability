@@ -27,6 +27,9 @@ def eval_model(args, model, data_loader):
 
             if args.encoder == "monet" or args.decoder == "monet":
                 zh, xh, _ = model(x)
+            elif args.autoencoder == "beta-vae":
+                # import pdb; pdb.set_trace()
+                zh, xh, mu, logvar = model(x)
             else:
                 zh, xh = model(x)
 
@@ -34,6 +37,7 @@ def eval_model(args, model, data_loader):
             run_recon_loss += ((x - xh).square().mean()).item()
 
             # get c_comp
+            # import pdb; pdb.set_trace()
             jacobian = torch.vmap(torch.func.jacfwd(model.decoder))(zh.flatten(1))
             if args.data == "spriteworld":
                 jacobian = jacobian.flatten(1, 4)

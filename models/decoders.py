@@ -24,6 +24,7 @@ class BaselineDecoder(nn.Module):
 
     def forward(self, x):
         # if we are computing the jacobian we need to add a batch dim
+        import pdb; pdb.set_trace()
         if len(x.shape) != 3:
             x = x.reshape(1, self.num_slots, self.slot_dim)
         for i in range(self.num_slots):
@@ -120,25 +121,54 @@ class SpatialBroadcastDecoder(nn.Module):
         return recon
     
 class BetaVAEDecoder(nn.Module):
-    def __init__(self, nc=3, z_dim=6):
+    def __init__(self, num_slots, slot_dim, nc=3, z_dim=6):
         super().__init__()
-        self.decoder = nn.Sequential(
-            nn.Linear(z_dim, 256),               # B, 256
-            View((-1, 256, 1, 1)),               # B, 256,  1,  1
-            nn.ReLU(True),
-            nn.ConvTranspose2d(256, 64, 4),      # B,  64,  4,  4
-            nn.ReLU(True),
-            nn.ConvTranspose2d(64, 64, 4, 2, 1), # B,  64,  8,  8
-            nn.ReLU(True),
-            nn.ConvTranspose2d(64, 32, 4, 2, 1), # B,  32, 16, 16
-            nn.ReLU(True),
-            nn.ConvTranspose2d(32, 32, 4, 2, 1), # B,  32, 32, 32
-            nn.ReLU(True),
-            nn.ConvTranspose2d(32, nc, 4, 2, 1),  # B, nc, 64, 64
-        )
+        z_dim = num_slots * slot_dim
+        self.num_slots = num_slots
+        self.slot_dim = slot_dim
+        self.z_dim = z_dim
+        # import pdb; pdb.set_trace()
+        self.linear1 = nn.Linear(z_dim // num_slots, 256)
+        self.conv1 = nn.ConvTranspose2d(256, 64, 4)
+        self.conv2 = nn.ConvTranspose2d(64, 64, 4, 2, 1)
+        self.conv3 = nn.ConvTranspose2d(64, 32, 4, 2, 1)
+        self.conv4 = nn.ConvTranspose2d(32, 32, 4, 2, 1)
+        self.conv5 = nn.ConvTranspose2d(32, nc, 4, 2, 1)
 
     def forward(self, x):
-        return self.decider(x)
+        # import pdb; pdb.set_trace()
+        if len(x.shape) != 3:
+            x = x.reshape(1, self.num_slots, self.slot_dim)
+        for i in range(self.num_slots):
+            xs = x[:, i]
+            xs = self.linear1(xs)
+            xs = F.elu(xs)
+            xs = xs.view((-1, 256, 1, 1))
+            xs = self.conv1(xs)
+            xs = F.elu(xs)
+            xs = self.conv2(xs)
+            xs = F.elu(xs)
+            xs = self.conv3(xs)
+            xs = F.elu(xs)
+            xs = self.conv4(xs)
+            xs = F.elu(xs)
+            xs = self.conv5(xs)
+        #     if i == 0:
+        #         x_all = xs.unsqueeze(1)
+        #     else:
+        #         x_all = torch.cat((x_all, xs.unsqueeze(1)), dim=1)
+
+        # x_all = x_all.permute(0, 1, 3, 4, 2).flatten(0, 1)
+        # recons, masks = x_all.reshape(
+        #     1, -1, x_all.shape[1], x_all.shape[2], x_all.shape[3]
+        # ).split([3, 1], dim=-1)
+        # masks = nn.Softmax(dim=1)(masks)
+
+        # xhs = recons * masks
+        # xh = torch.sum(xhs, dim=1).permute(0, 3, 1, 2)
+        return xs
+        
+        # return self.decoder(x)
     
 class View(nn.Module):
     def __init__(self, size):

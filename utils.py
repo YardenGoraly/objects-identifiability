@@ -148,6 +148,10 @@ def get_model(args):
             slot_dim=args.inf_slot_dim,
             chan_dim=chan_dim,
         ).to(device)
+    elif args.encoder == "beta-vae":
+        encoder = encoders.BetaVAEEncoder(
+            num_slots=args.num_slots, hid_dim=args.inf_slot_dim
+        ).to(device)
 
     # get decoder
     if args.data == "synth":
@@ -163,20 +167,26 @@ def get_model(args):
         decoder = decoders.SpatialBroadcastDecoder(
             slot_dim=args.inf_slot_dim, resolution=resolution, chan_dim=chan_dim
         ).to(device)
+    if args.decoder == "beta-vae":
+        decoder = decoders.BetaVAEDecoder(
+            num_slots=args.num_slots, slot_dim=args.inf_slot_dim
+        ).to(device)
 
     # get autoencoder
-    # autoencoder = AutoEncoder(
-    #     num_slots=args.num_slots,
-    #     slot_dim=args.inf_slot_dim,
-    #     encoder=encoder,
-    #     decoder=decoder,
-    # ).to(device)
-    autoencoder = BetaVAE(
-        num_slots=args.num_slots,
-        slot_dim=args.inf_slot_dim,
-        encoder=encoder,
-        decoder=decoder,
-    ).to(device)
+    if args.autoencoder == "beta-vae":
+        autoencoder = BetaVAE(
+            num_slots=args.num_slots,
+            slot_dim=args.inf_slot_dim,
+            encoder=encoder,
+            decoder=decoder,
+        ).to(device)
+    else:
+        autoencoder = AutoEncoder(
+            num_slots=args.num_slots,
+            slot_dim=args.inf_slot_dim,
+            encoder=encoder,
+            decoder=decoder,
+        ).to(device)
     return autoencoder
 
 
