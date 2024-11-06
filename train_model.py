@@ -49,7 +49,6 @@ def train_model(args):
     Args:
         args: Command line arguments specifying training setup
     """
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # fix random seed
@@ -85,6 +84,7 @@ def train_model(args):
             zh, x_recon, mu, logvar = model(x)
             total_loss = None
         else:
+            # import pdb; pdb.set_trace()
             zh, xh = model(x)
             total_loss = None
 

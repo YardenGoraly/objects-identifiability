@@ -69,22 +69,22 @@ class SpatialBroadcastDecoder(nn.Module):
         super().__init__()
         self.chan_dim = chan_dim
         self.slot_dim = slot_dim
-        self.conv1 = nn.ConvTranspose2d(
-            slot_dim, self.chan_dim, 5, stride=(2, 2), padding=2, output_padding=1
+        self.conv1 = nn.ConvTranspose3d(
+            slot_dim, self.chan_dim, 5, stride=(2, 2, 2), padding=2, output_padding=1
         )
-        self.conv2 = nn.ConvTranspose2d(
-            self.chan_dim, self.chan_dim, 5, stride=(2, 2), padding=2, output_padding=1
+        self.conv2 = nn.ConvTranspose3d(
+            self.chan_dim, self.chan_dim, kernel_size=(1, 5, 5), stride=(1, 2, 2), padding=(0, 2, 2), output_padding=(0, 1, 1)
         )
-        self.conv3 = nn.ConvTranspose2d(
-            self.chan_dim, self.chan_dim, 5, stride=(2, 2), padding=2, output_padding=1
+        self.conv3 = nn.ConvTranspose3d(
+            self.chan_dim, self.chan_dim, kernel_size=(1, 5, 5), stride=(1, 2, 2), padding=(0, 2, 2), output_padding=(0, 1, 1)
         )
-        self.conv4 = nn.ConvTranspose2d(
-            self.chan_dim, self.chan_dim, 5, stride=(2, 2), padding=2, output_padding=1
+        self.conv4 = nn.ConvTranspose3d(
+            self.chan_dim, self.chan_dim, kernel_size=(1, 5, 5), stride=(1, 2, 2), padding=(0, 2, 2), output_padding=(0, 1, 1)
         )
-        self.conv5 = nn.ConvTranspose2d(
-            self.chan_dim, self.chan_dim, 5, stride=(1, 1), padding=2
+        self.conv5 = nn.ConvTranspose3d(
+            self.chan_dim, self.chan_dim, kernel_size=(1, 5, 5), stride=(1, 1, 1), padding=(0, 2, 2)
         )
-        self.conv6 = nn.ConvTranspose2d(self.chan_dim, 4, 3, stride=(1, 1), padding=1)
+        self.conv6 = nn.ConvTranspose3d(self.chan_dim, 4, 3, stride=(1, 1, 1), padding=1)
         self.decoder_initial_size = (8, 8)
         self.decoder_pos = SoftPositionEmbed(slot_dim, self.decoder_initial_size)
         self.resolution = resolution
@@ -94,11 +94,13 @@ class SpatialBroadcastDecoder(nn.Module):
         if len(x.shape) != 3:
             num_slots = int(x.shape[0] / self.slot_dim)
             x = x.reshape(1, num_slots, self.slot_dim)
+        # import pdb; pdb.set_trace()
         bs = x.shape[0]
         x = x.reshape((-1, x.shape[-1])).unsqueeze(1).unsqueeze(2)
         x = x.repeat((1, 8, 8, 1))
         x = self.decoder_pos(x)
         x = x.permute(0, 3, 1, 2)
+        x = x.unsqueeze(2)
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -110,14 +112,15 @@ class SpatialBroadcastDecoder(nn.Module):
         x = self.conv5(x)
         x = F.relu(x)
         x = self.conv6(x)
-        x = x[:, :, : self.resolution[0], : self.resolution[1]]
-        x = x.permute(0, 2, 3, 1)
-        recons, masks = x.reshape(bs, -1, x.shape[1], x.shape[2], x.shape[3]).split(
+        x = x[:, :, :, : self.resolution[0], : self.resolution[1]]
+        x = x.permute(0, 2, 3, 4, 1)  #B, C, H, W
+        recons, masks = x.reshape(bs, -1, x.shape[1], x.shape[2], x.shape[3], x.shape[4]).split(
             [3, 1], dim=-1
         )
         masks = nn.Softmax(dim=1)(masks)
         xhs = recons * masks
-        recon = torch.sum(xhs, dim=1).permute(0, 3, 1, 2)
+        # import pdb; pdb.set_trace()
+        recon = torch.sum(xhs, dim=1).permute(0, 1, 4, 2, 3)
         return recon
     
 class BetaVAEDecoder(nn.Module):

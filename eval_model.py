@@ -37,13 +37,17 @@ def eval_model(args, model, data_loader):
             run_recon_loss += ((x - xh).square().mean()).item()
 
             # get c_comp
-            # import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             jacobian = torch.vmap(torch.func.jacfwd(model.decoder))(zh.flatten(1))
             if args.data == "spriteworld":
-                jacobian = jacobian.flatten(1, 4)
-            run_c_comp += compositional_contrast(
-                jacobian, args.inf_slot_dim, args.data
-            ).item()
+                jacobian = jacobian.flatten(3, 5)
+                jacobian = jacobian.squeeze(1)
+            jacobian = jacobian.permute(1, 0, 2, 3)
+            for i in range(jacobian.shape[0]):
+                sub_jac = jacobian[i]
+                run_c_comp += compositional_contrast(
+                    sub_jac, args.inf_slot_dim, args.data
+                ).item()
 
             # save latents
             if b_it == 0:
@@ -77,6 +81,7 @@ def eval_model(args, model, data_loader):
         SIS = (r2_on - r2_off).mean().item()
 
     elif args.data == "spriteworld":
+        # import pdb; pdb.set_trace()
         z = Z.reshape(len(Z), args.num_slots, -1).to(device)
         z_pred = Zh.reshape(len(Zh), args.num_slots, -1).to(device)
         SIS_metrics = evaluate_model(

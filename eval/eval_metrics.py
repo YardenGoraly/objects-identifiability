@@ -22,14 +22,16 @@ def compositional_contrast(
     Returns:
         unweighted or weighted mean compositional contrast values depending on dataset used
     """
-    batch_size, obs_dim, z_dim = jac.shape[0], jac.shape[1], jac.shape[2]
+    import pdb; pdb.set_trace()
+    batch_size, obs_dim, z_dim = jac.shape[0], jac.shape[2], jac.shape[3]
     num_slots = int(z_dim / slot_dim)
 
     jac = jac.reshape(
-        batch_size * obs_dim, z_dim
+        num_slots, batch_size * obs_dim, z_dim
     )  # batch_size*obs_dim x num_slots*slot_dim
+
     slot_rows = torch.stack(
-        torch.split(jac, slot_dim, dim=1)
+        torch.split(jac, slot_dim, dim=2)
     )  # num_slots x batch_size*obs_dim x slot_dim
 
     # Get norms for all pixels wrt each latent slot for all samples in batch

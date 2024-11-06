@@ -86,11 +86,13 @@ def get_data(args):
         val_batch = 100
 
     elif args.data == "spriteworld":
-        data_path = "data/datasets/" + str(args.num_slots) + "_obj_sprites.npz"
+        # data_path = "data/datasets/" + str(args.num_slots) + "_obj_sprites.npz"
+        data_path = "data/datasets/" + str(args.num_slots) + "_obj_sprites_new_observations.npz"
         X = np.load(data_path)["arr_0"]
         Z = np.load(data_path)["arr_1"]
         transform = transforms.ToTensor()
         val_batch = 5
+        # import pdb; pdb.set_trace()
 
     # train and validation splits
     Z_train, Z_val = np.split(Z, [int(0.9 * len(Z))])

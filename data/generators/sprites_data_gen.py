@@ -50,9 +50,9 @@ def random_sprites_config(num_objects):
         ]
     )
     num_sprites = lambda: np.random.randint(2, num_objects + 1)
-    sprite_gen1 = sprite_generators.generate_sprites(factors1, num_sprites=1)
+    # sprite_gen1 = sprite_generators.generate_sprites(factors1, num_sprites=1)
     sprite_gen2 = sprite_generators.generate_sprites(factors2, num_sprites=1)
-    sprite_gen = sprite_generators.chain_generators(sprite_gen1, sprite_gen2)
+    # sprite_gen = sprite_generators.chain_generators(sprite_gen1, sprite_gen2)
 
     # move = action_spaces.SelectMove(scale=0.5)
 
@@ -71,7 +71,7 @@ def random_sprites_config(num_objects):
         "task": tasks.NoReward(),
         "action_space": action_spaces.SelectMove(),
         "renderers": renderers,
-        "init_sprites": sprite_gen,
+        "init_sprites": sprite_gen2,
         "max_episode_length": 8,
         "keep_in_frame": True,
     }
@@ -135,13 +135,14 @@ def collect_frames(config, max_objects, num_frames, shape_dict):
     images = []
     num_obj = []
     # Z = np.zeros((num_frames, max_objects, 6))
-    num_seq = 8
-    B = num_frames // num_seq
-    Z = np.zeros((B, num_seq, max_objects, 6)) #batch x num_seq x max_obj x 6
+    seq_len = 8
+    B = num_frames // seq_len
+    Z = np.zeros((B, seq_len, max_objects, 6)) #batch x num_seq x max_obj x 6
+    # import pdb; pdb.set_trace()
     for i in range(B):
         print(i)
         ts = env.reset()
-        for j in range(num_seq):
+        for j in range(seq_len):
             for k in range(len(env._sprites)):
                 # import pdb; pdb.set_trace()
                 Z[i, j, k, 0] = env._sprites[k].x
@@ -158,6 +159,7 @@ def collect_frames(config, max_objects, num_frames, shape_dict):
             del obs[-1]
             num_obj.append(len(obs) - 1)
             images.append(obs[0])
+    # import pdb; pdb.set_trace()
 
     return images, Z, num_obj
 

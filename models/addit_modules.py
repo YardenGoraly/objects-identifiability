@@ -88,6 +88,7 @@ class SlotAttention(nn.Module):
         self.norm_pre_ff = nn.LayerNorm(dim)
 
     def forward(self, inputs):
+        # import pdb; pdb.set_trace()
         b, n, d = inputs.shape
 
         n_s = self.num_slots

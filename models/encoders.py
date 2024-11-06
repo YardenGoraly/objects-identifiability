@@ -40,6 +40,7 @@ class MonolithicEncoder(nn.Module):
         x = self.linear2(x)
         x = F.elu(x)
         x = self.linear3(x)
+        # import pdb; pdb.set_trace()
         return x.reshape(x.shape[0], self.num_slots, self.hid_dim)
 
 
@@ -54,10 +55,10 @@ class SlotEncoder(nn.Module):
         self.num_slots = num_slots
         self.slot_dim = slot_dim
         self.chan_dim = chan_dim
-        self.conv1 = nn.Conv2d(3, self.chan_dim, 5, padding=2)
-        self.conv2 = nn.Conv2d(self.chan_dim, self.chan_dim, 5, padding=2)
-        self.conv3 = nn.Conv2d(self.chan_dim, self.chan_dim, 5, padding=2)
-        self.conv4 = nn.Conv2d(self.chan_dim, slot_dim, 5, padding=2)
+        self.conv1 = nn.Conv3d(3, self.chan_dim, 5, padding=2)
+        self.conv2 = nn.Conv3d(self.chan_dim, self.chan_dim, 5, padding=2)
+        self.conv3 = nn.Conv3d(self.chan_dim, self.chan_dim, 5, padding=2)
+        self.conv4 = nn.Conv3d(self.chan_dim, slot_dim, 5, padding=2)
         self.fc1 = nn.Linear(slot_dim, slot_dim)
         self.fc2 = nn.Linear(slot_dim, slot_dim)
         self.encoder_pos = SoftPositionEmbed(self.slot_dim, resolution)
@@ -71,6 +72,8 @@ class SlotEncoder(nn.Module):
         )
 
     def forward(self, x):
+        # import pdb; pdb.set_trace()
+        x = x.permute(0, 2, 1, 3, 4)
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -79,18 +82,21 @@ class SlotEncoder(nn.Module):
         x = F.relu(x)
         x = self.conv4(x)
         x = F.relu(x)
-        x = x.permute(0, 2, 3, 1)
+        x = x.permute(0, 2, 3, 4, 1) # B x C x O x H x W => B x O x H x W x C
         x = self.encoder_pos(x)
-        x = torch.flatten(x, 1, 2)
+        x = torch.flatten(x, 1, 3) # B x C x H x W
         x = nn.LayerNorm(x.shape[1:]).to(device)(x)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
+        # import pdb; pdb.set_trace()
         return self.slot_attention(x)
 
 class BetaVAEEncoder(nn.Module):
     def __init__(self, num_slots, hid_dim, nc=3, z_dim=6):
         super().__init__()
+        self.num_slots = num_slots
+        self.hid_dim = hid_dim
         self.encoder = nn.Sequential(
             nn.Conv2d(nc, 32, 4, 2, 1),          # B,  32, 32, 32
             nn.ReLU(True),
@@ -103,11 +109,11 @@ class BetaVAEEncoder(nn.Module):
             nn.Conv2d(64, 256, 4, 1),            # B, 256,  1,  1
             nn.ReLU(True),
             View((-1, 256*1*1)),                 # B, 256
-            nn.Linear(256, num_slots * hid_dim),             # B, z_dim*2
+            nn.Linear(256, 2 * num_slots * hid_dim),             # B, 2 * num_slots * hid_dim
         )
 
     def forward(self, x):
-        return self.encoder(x).reshape(x.shape[0], self.num_slots, self.hid_dim)
+        return self.encoder(x).reshape(x.shape[0], 2 * self.num_slots * self.hid_dim)
     
 class View(nn.Module):
     def __init__(self, size):
